@@ -14,6 +14,9 @@ import org.locationtech.jts.io.WKBWriter;
 import org.postgresql.util.PGobject;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,12 +53,26 @@ public class GeoJsonServicesImpl<T extends GeoEntity<ID>, ID extends Serializabl
         if (geometry != null) {
             feature.setGeometry(geometry);
         }
+        Arrays.stream(t.getClass().getFields()).forEach(field -> {
+            if (!field.getName().equalsIgnoreCase("shape")) {
+                try {
+                    Method method = t.getClass().getMethod("getShape");
+                    feature.setProperty(field.getName(), method.invoke(t));
+                } catch (NoSuchMethodException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
 
         Reflect.on(t).fields().forEach((k, v) -> {
             if (!k.equalsIgnoreCase("shape")) {
                 feature.setProperty(k, v.get());
             }
-
         });
         feature.setId(String.valueOf(t.getId()));
         return feature;
